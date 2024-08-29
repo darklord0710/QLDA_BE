@@ -1,0 +1,120 @@
+<!doctype html>
+<html class="no-js" lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<aside th:insert="~{admin/common/headerAdmin :: admin-header-common}" />
+</head>
+
+<body>
+	<aside th:insert="~{admin/common/adminLeftPanel :: left-panel-common}" />
+
+	<!-- Right Panel -->
+	<div id="right-panel" class="right-panel">
+		<!-- Header-->
+		<aside
+			th:insert="~{admin/common/headerRightPanel :: header-rightPanel-common}" />
+		<!-- /#header -->
+		<!-- Content -->
+		<div class="content">
+
+			<div class="col-lg-12">
+				<div class="card">
+					<div class="card-header">
+						<strong>ADD NEW COURSE</strong>
+					</div>
+					<div class="card-body card-block">
+						<form th:action="@{/admin/addOrUpdateCourse}" method="post"
+							enctype="multipart/form-data" th:object="${course}"
+							class="form-horizontal">
+							
+							<input type="hidden" th:field="${course.id}" th:value="${course.id}"/>
+							<input type="hidden" th:field="${course.imageUrl}" th:value="${course.imageUrl}"/>
+							
+
+							<div class="row form-group">
+								<div class="col col-md-3">
+									<label for="text-input" class=" form-control-label">Title</label>
+								</div>
+								<div class="col-12 col-md-9">
+									<input th:field="${course.title}" required type="text"
+										id="text-input" name="text-input" placeholder="Title"
+										class="form-control"><small
+										class="form-text text-muted">Title of course</small>
+								</div>
+							</div>
+
+							<div class="row form-group">
+								<div class="col col-md-3">
+									<label for="textarea-input" class=" form-control-label">Description</label>
+								</div>
+								<div class="col-12 col-md-9">
+									<textarea th:text="${course.des}" th:field="${course.des}" name="textarea-input"
+										id="textarea-input" placeholder="Description..."
+										class="form-control"></textarea>
+								</div>
+							</div>
+
+							<div class="row form-group">
+								<div class="col col-md-3">
+									<label for="text-input" class=" form-control-label">Price</label>
+								</div>
+								<div class="col-12 col-md-9">
+									<input th:field="${course.price}" required min="0"
+										type="number" id="text-input" name="text-input"
+										placeholder="Price" class="form-control">
+								</div>
+							</div>
+
+							<div class="row form-group">
+								<div class="col col-md-3">
+									<label class=" form-control-label">Is actived</label>
+								</div>
+								<div class="col col-md-9">
+									<div class="form-check-inline form-check">
+										<label for="inline-checkbox1" class="form-check-label ">
+											<input th:checked="${course.isActived}" type="checkbox" id="inline-checkbox1"
+											name="isActived" value="true" class="form-check-input">
+										</label>
+									</div>
+								</div>
+							</div>
+							<div class="row form-group">
+								<div class="col col-md-3">
+									<label for="file-input" class=" form-control-label">File
+										image</label>
+								</div>
+								<div class="col-12 col-md-9">
+									<input type="file" id="file-input" name="imageFile"
+									th:attr="required=${course.imageUrl == null or course.imageUrl.isEmpty() ? 'required' : null}"
+										class="form-control-file" th:text="${course.imageUrl}">
+								</div>
+							</div>
+							<div class="card-footer">
+								<button type="submit" class="btn btn-primary btn-sm">
+									<i class="fa fa-dot-circle-o"></i> Submit
+								</button>
+								<button type="reset" class="btn btn-danger btn-sm">
+									<i class="fa fa-ban"></i> Reset
+								</button>
+							</div>
+						</form>
+					</div>
+
+				</div>
+			</div>
+
+		</div>
+
+		<!-- /.content -->
+		<div class="clearfix"></div>
+		<!-- Footer -->
+		<aside th:insert="~{admin/common/footerAdmin :: footer-admin-common}" />
+
+		<!-- /.site-footer -->
+	</div>
+	<!-- /#right-panel -->
+
+	<!-- Scripts -->
+	<aside th:insert="~{admin/common/scriptCommon :: script-common}" />
+
+</body>
+</html>

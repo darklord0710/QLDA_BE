@@ -1,0 +1,100 @@
+<!doctype html>
+<html class="no-js" lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+<aside th:insert="~{admin/common/headerAdmin :: admin-header-common}" />
+</head>
+
+<body>
+	<aside th:insert="~{admin/common/adminLeftPanel :: left-panel-common}" />
+
+	<!-- Right Panel -->
+	<div id="right-panel" class="right-panel">
+		<!-- Header-->
+		<aside
+			th:insert="~{admin/common/headerRightPanel :: header-rightPanel-common}" />
+		<!-- /#header -->
+		<!-- Content -->
+		<div class="content">
+			<div th:each="c : ${lsc}" class="row">
+				<div class="col-lg-12">
+					<div class="card">
+						<div class="card-header">
+							<strong th:text="${c.title}" class="card-title"></strong>
+						</div>
+						<div class="table-stats order-table ov-h">
+							<table class="table ">
+								<thead>
+									<tr>
+										<th class="serial">#</th>
+										<th th:text="${c.id}"></th>
+										<th th:text="${c.title}"></th>
+										<th th:text="${c.imageUrl}"></th>
+										<th><span th:if="${c.isActived == true}"
+											class="badge badge-complete">Active</span> <span
+											th:if="${c.isActived != true}" class="badge badge-danger">Inactive</span>
+
+										</th>
+										<th><a
+											th:href="@{/admin/updateCourse/{courseId}(courseId = ${c.id})}"><i
+												class="fa fa-wrench"></i></a> <a href="#times"><i
+												class="fa fa-times"></i></a></th>
+									</tr>
+								</thead>
+								<thead>
+									<tr>
+										<th class="serial">#</th>
+										<th>ID</th>
+										<th>Title</th>
+										<th>Video source</th>
+										<th>Actived</th>
+										<th>Action</th>
+									</tr>
+								</thead>
+								<tbody>
+
+									<tr th:each=" l , iterStat  : ${c.lessons} ">
+										<td class="serial" th:text="${iterStat.index}"></td>
+										<td th:text="${l.id}"></td>
+
+										<td><span class="name" th:text="${l.title}"></span></td>
+										<td class="avatar">
+											<div class="round-img">
+												<video width="320" height="240" controls>
+													<source th:src="${l.videoUrl}" type="video/mp4">
+												</video>
+											</div>
+										</td>
+										<td><span th:if="${l.isActived == true}"
+											class="badge badge-complete">Active</span> <span
+											th:if="${l.isActived != true}" class="badge badge-danger">Inactive</span>
+
+										</td>
+										<td><a
+											th:href="@{/admin/updateLesson/{lessonId}(lessonId = ${l.id})}"><i
+												class="fa fa-wrench"></i></a> <a href="#times"><i
+												class="fa fa-times"></i></a></td>
+									</tr>
+
+								</tbody>
+							</table>
+						</div>
+						<!-- /.table-stats -->
+					</div>
+				</div>
+			</div>
+
+			<!-- /.content -->
+			<div class="clearfix"></div>
+			<!-- Footer -->
+			<aside th:insert="~{admin/common/footerAdmin :: footer-admin-common}" />
+
+			<!-- /.site-footer -->
+		</div>
+	</div>
+
+	<!-- /#right-panel -->
+
+	<!-- Scripts -->
+	<aside th:insert="~{admin/common/scriptCommon :: script-common}" />
+</body>
+</html>

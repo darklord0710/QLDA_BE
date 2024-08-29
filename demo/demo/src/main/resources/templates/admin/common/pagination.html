@@ -1,0 +1,51 @@
+<div
+	th:fragment="myPagination(pageNumbers, page , size, url , pageNumbers)">
+	<nav th:if="${totalPages > 0}"
+		aria-label="Page navigation example">
+		<ul class="pagination justify-content-end">
+			<li th:class="${page > 1} ? 'page-item' : 'page-item disabled'"><a
+				class="page-link"
+				th:href="@{${url}(size=size, page=page-1)}"
+				tabindex="-1">Previous</a></li>
+			<span th:if="$totalPages <= 3}"
+				th:each="pageNumber : ${pageNumbers}">
+				<li
+				th:class="${pageNumber == page} ?'page-item active' : 'page-item'">
+					<a
+					th:href="@{${url}(size=${size}, page=${pageNumber})}"
+					th:text=${pageNumber} class="page-link"></a>
+			</li>
+			</span>
+
+			<span class="d-inline-block"
+				th:if="${totalPages > 3}">
+				<nav class="d-inline-block"
+					th:each="pageNumber , iterStat : ${pageNumbers}"
+					th:if="${pageNumber >= ${page} && pageNumber <= ${page} + 2 && pageNumber < ${totalPages}}">
+					<li
+						th:class="${pageNumber == page} ?'page-item active' : 'page-item'">
+						<a
+						th:href="@{${url}(size=${size}, page=${pageNumber})}"
+						th:text=${pageNumber} class="page-link"></a>
+					</li>
+
+				</nav>
+				<li
+				th:class="${page + 1 == ${totalPages}} ? 'page-item d-none d-inline-block' : 'page-item d-inline-block' "><a
+					class="page-link" href="#">...</a></li>
+				<li
+				th:class="${pageNumber == page} ?'page-item active d-inline-block' : 'd-inline-block page-item'">
+					<a
+					th:href="@{${url}(size=size, page=${totalPages})}"
+					th:text=${totalPages} class="page-link"></a>
+			</li>
+			</span>
+
+			<li
+				th:class="${page < ${totalPages}} ? 'page-item' : 'page-item disabled'"><a
+				class="page-link"
+				th:href="@{${url}(size=size, page=page+1)}">Next</a>
+			</li>
+		</ul>
+	</nav>
+</div>
