@@ -1,7 +1,10 @@
 package com.spring.qldapmbe.manageCourse.demo.controller;
 
 import java.text.ParseException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -21,6 +24,7 @@ import com.spring.qldapmbe.manageCourse.demo.entity.Lesson;
 import com.spring.qldapmbe.manageCourse.demo.entity.User;
 import com.spring.qldapmbe.manageCourse.demo.service.CourseService;
 import com.spring.qldapmbe.manageCourse.demo.service.LessonService;
+import com.spring.qldapmbe.manageCourse.demo.service.UserCourseService;
 import com.spring.qldapmbe.manageCourse.demo.service.UserService;
 
 
@@ -31,14 +35,16 @@ public class AdminController {
 	private UserService userService;
 	private CourseService courseService;
 	private LessonService lessonService;
+	private UserCourseService userCourseService;
 
 	@Autowired
 	public AdminController(UserService userService, CourseService courseService,
-			LessonService lessonService) {
+			LessonService lessonService, UserCourseService userCourseService) {
 		super();
 		this.userService = userService;
 		this.courseService = courseService;
 		this.lessonService = lessonService;
+		this.userCourseService = userCourseService;
 	}
 
 	@ModelAttribute
@@ -164,6 +170,43 @@ public class AdminController {
 		lessonService.setCloudinaryField(lesson);
 
 		return "redirect:/admin/coursesList";
+	}
+
+	@GetMapping("/admin/stats")
+	public String getFormStats(Model model, @RequestParam Map<String, String> params) {
+		String monthlyCourseSold = params.getOrDefault("monthlyCourseSold",
+				String.valueOf(LocalDateTime.now().getYear()));
+
+		monthlyCourseSold = monthlyCourseSold.isEmpty() || monthlyCourseSold.equals("")
+				? String.valueOf(LocalDateTime.now().getYear())
+				: monthlyCourseSold;
+
+		List<Object[]> stats1 = userCourseService
+				.statsMonlyCourseSoldByYear(Integer.parseInt(monthlyCourseSold));
+
+		List<Object[]> stats2 = userCourseService.statsRevenueYearlyCourseSoldAllYear();
+
+		List<Map<String, Object>> formattedResults = new ArrayList<>();
+		List<Map<String, Object>> formattedResults2 = new ArrayList<>();
+
+		for (Object[] s : stats1) {
+			Map<String, Object> resultMap = new HashMap<>();
+			resultMap.put("monthJoined", s[0]);
+			resultMap.put("quantity", s[1]);
+			formattedResults.add(resultMap);
+		}
+
+		for (Object[] s : stats2) {
+			Map<String, Object> resultMap2 = new HashMap<>();
+			resultMap2.put("yearJoined", s[0]);
+			resultMap2.put("quantity", s[1]);
+			formattedResults2.add(resultMap2);
+		}
+
+		model.addAttribute("yearCourseSold", monthlyCourseSold);
+		model.addAttribute("monthlyJoinedCount", formattedResults);
+		model.addAttribute("yearlyRevenueCount", formattedResults2);
+		return "/admin/stats";
 	}
 
 
