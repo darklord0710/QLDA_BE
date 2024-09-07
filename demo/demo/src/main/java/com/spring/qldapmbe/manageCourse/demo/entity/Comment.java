@@ -44,12 +44,12 @@ public class Comment implements Serializable {
 	@Column(name = "content", nullable = false)
 	private String content;
 
-	@Column(name = "isParentComment")
-	private Boolean isParentComment = false;
-
 	@Column(name = "created_date")
 	private Date createdDate;
 	
+	@Column(name = "updated_date")
+	private Date updatedDate;
+
 	@Transient
 	@Value("${props.defaultValue:0}")
 	private Integer totalLike;

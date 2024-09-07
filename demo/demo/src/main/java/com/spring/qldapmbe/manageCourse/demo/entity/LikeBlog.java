@@ -47,7 +47,7 @@ public class LikeBlog implements Serializable {
 	@JoinColumn(name = "blog_id", referencedColumnName = "id")
 	private Blog blog;
 
-	@Column(name = "is_actived")
-	private Boolean isActived = true;
+	@Column(name = "has_liked")
+	private Boolean hasLiked = true;
 
 }

@@ -12,6 +12,7 @@ import com.spring.qldapmbe.manageCourse.demo.entity.User;
 
 
 
+
 @Repository
 public interface BlogRepository extends JpaRepository<Blog, Integer> {
 
