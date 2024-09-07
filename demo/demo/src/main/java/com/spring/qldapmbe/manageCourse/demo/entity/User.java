@@ -53,6 +53,9 @@ public class User implements Serializable {
 	@Column(name = "name", nullable = false)
 	private String name;
 
+	@Column(name = "`desc`")
+	private String desc;
+
 	@Column(name = "created_date")
 	@JsonIgnore
 	private Date createdDate;
@@ -60,6 +63,10 @@ public class User implements Serializable {
 	@Column(name = "is_actived")
 	@JsonIgnore
 	private Boolean active;
+
+	@Column(name = "slug")
+	@JsonIgnore
+	private String slug;
 
 	@Transient
 	@JsonIgnore

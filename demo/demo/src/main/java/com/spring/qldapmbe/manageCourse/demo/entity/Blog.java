@@ -4,8 +4,6 @@ import java.io.Serializable;
 import java.util.Date;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import jakarta.persistence.CascadeType;
@@ -19,7 +17,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -49,13 +46,12 @@ public class Blog implements Serializable {
 	@Column(name = "created_date")
 	private Date createdDate;
 
-	@Transient
-	@Value("${props.defaultValue:0}")
-	private Integer totalLike;
+	@Column(name = "updated_date")
+	private Date updatedDate;
 
-	@Transient
-	@Value("${props.defaultValue:#{0}}")
-	private Integer totalComment;
+	@Column(name = "`desc`")
+	private String desc;
+
 
 	@ManyToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
 	@JoinColumn(name = "user_id", referencedColumnName = "id")
