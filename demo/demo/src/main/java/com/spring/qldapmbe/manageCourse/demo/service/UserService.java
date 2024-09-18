@@ -20,4 +20,6 @@ public interface UserService extends UserDetailsService {
 
 	void setCloudinaryField(User user);
 
+	User findBySlug(String slug);
+
 }

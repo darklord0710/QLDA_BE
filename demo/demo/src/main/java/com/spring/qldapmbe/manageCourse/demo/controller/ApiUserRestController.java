@@ -33,12 +33,14 @@ import com.spring.qldapmbe.manageCourse.demo.Dto.BlogDtoOutputById;
 import com.spring.qldapmbe.manageCourse.demo.Dto.BlogItemDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.CommentBlogInputDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.CommentItemDto;
+import com.spring.qldapmbe.manageCourse.demo.Dto.CommentLessonInputDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.CreateCommentBlogOutputDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.EmailDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.HasLikedDto;
+import com.spring.qldapmbe.manageCourse.demo.Dto.LessonQuickViewDto;
+import com.spring.qldapmbe.manageCourse.demo.Dto.MessageDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.TotalLikeDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.UpdateContentCmtDto;
-import com.spring.qldapmbe.manageCourse.demo.Dto.UpdatedNameDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.UserCreatorDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.UserLoginDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.UserRegisterDto;
@@ -46,12 +48,17 @@ import com.spring.qldapmbe.manageCourse.demo.config.JwtService;
 import com.spring.qldapmbe.manageCourse.demo.entity.Blog;
 import com.spring.qldapmbe.manageCourse.demo.entity.Comment;
 import com.spring.qldapmbe.manageCourse.demo.entity.CommentBlog;
+import com.spring.qldapmbe.manageCourse.demo.entity.CommentLesson;
+import com.spring.qldapmbe.manageCourse.demo.entity.Course;
+import com.spring.qldapmbe.manageCourse.demo.entity.Lesson;
 import com.spring.qldapmbe.manageCourse.demo.entity.LikeBlog;
 import com.spring.qldapmbe.manageCourse.demo.entity.LikeComment;
 import com.spring.qldapmbe.manageCourse.demo.entity.User;
+import com.spring.qldapmbe.manageCourse.demo.entity.UserCourse;
 import com.spring.qldapmbe.manageCourse.demo.entity.VerifyEmail;
 import com.spring.qldapmbe.manageCourse.demo.service.BlogService;
 import com.spring.qldapmbe.manageCourse.demo.service.CommentBlogService;
+import com.spring.qldapmbe.manageCourse.demo.service.CommentLessonService;
 import com.spring.qldapmbe.manageCourse.demo.service.CommentService;
 import com.spring.qldapmbe.manageCourse.demo.service.CourseService;
 import com.spring.qldapmbe.manageCourse.demo.service.LessonService;
@@ -78,6 +85,7 @@ public class ApiUserRestController {
 	private CommentBlogService commentBlogService;
 	private LikeCommentService likeCommentService;
 	private LessonService lessonService;
+	private CommentLessonService commentLessonService;
 	private CourseService courseService;
 	private UserCourseService userCourseService;
 
@@ -87,7 +95,7 @@ public class ApiUserRestController {
 			BlogService blogService, LikeBlogService likeBlogService,
 			CommentService commentService, CommentBlogService commentBlogService,
 			LikeCommentService likeCommentService, LessonService lessonService,
-			CourseService courseService,
+			CommentLessonService commentLessonService, CourseService courseService,
 			UserCourseService userCourseService) {
 		super();
 		this.jwtService = jwtService;
@@ -100,16 +108,18 @@ public class ApiUserRestController {
 		this.commentBlogService = commentBlogService;
 		this.likeCommentService = likeCommentService;
 		this.lessonService = lessonService;
+		this.commentLessonService = commentLessonService;
 		this.courseService = courseService;
 		this.userCourseService = userCourseService;
 	}
 
 	@PostMapping(path = "/auth/login/")
 	@CrossOrigin
-	public ResponseEntity<String> login(@RequestBody UserLoginDto loginDto) {
+	public ResponseEntity<Object> login(@RequestBody UserLoginDto loginDto) {
 
 		if (!userService.authUser(loginDto.getEmail(), loginDto.getPassword()))
-			return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+			return new ResponseEntity<>(new MessageDto("Invalid email or password"),
+					HttpStatus.UNAUTHORIZED);
 
 		String token = jwtService.generateTokenLogin(loginDto.getEmail(),
 				loginDto.getPassword());
@@ -118,48 +128,60 @@ public class ApiUserRestController {
 
 	}
 
-	@GetMapping(path = "/current-user/", produces = {
-			MediaType.APPLICATION_JSON_VALUE
-	})
+	@GetMapping(path = "/current-user/")
 	@CrossOrigin
-	public ResponseEntity<User> getCurrentUserApi() {
+	public ResponseEntity<Object> getCurrentUserApi() {
 		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 		if (authentication != null && authentication.getPrincipal() instanceof UserDetails) {
 			User user = userService.findByEmail((authentication.getName()));
-			return new ResponseEntity<User>(user, HttpStatus.OK);
+			return new ResponseEntity<>(user, HttpStatus.OK);
 		}
-		return null;
+		return new ResponseEntity<>(new MessageDto("Invalid token"),
+				HttpStatus.UNAUTHORIZED);
+	}
+
+	@GetMapping(path = "/{slug}/")
+	@CrossOrigin
+	public ResponseEntity<Object> getUserBySlug(@PathVariable("slug") String slug) {
+		User user = userService.findBySlug(slug);
+		if (user == null)
+			return new ResponseEntity<>(new MessageDto("Invalid user"),
+					HttpStatus.UNAUTHORIZED);
+		return new ResponseEntity<>(user,
+				HttpStatus.OK);
 	}
 
 	@PostMapping(path = "/auth/check-email/")
 	@CrossOrigin
-	public ResponseEntity<String> checkExistEmail(@RequestBody EmailDto emailDto)
+	public ResponseEntity<Object> checkExistEmail(@RequestBody EmailDto emailDto)
 			throws UnsupportedEncodingException, MessagingException {
 
 		User existUser = userService.findByEmail(emailDto.getEmail());
 		if (existUser != null)
-			return new ResponseEntity<>("This email is existed !", HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<>(new MessageDto("This email is existed !"),
+					HttpStatus.BAD_REQUEST);
 
 		return new ResponseEntity<>("Successfully !", HttpStatus.OK);
 	}
 
 	@PostMapping(path = "/auth/verify-email/")
 	@CrossOrigin
-	public ResponseEntity<String> retrieveOtp(@RequestBody EmailDto emailDto)
+	public ResponseEntity<Object> retrieveOtp(@RequestBody EmailDto emailDto)
 			throws UnsupportedEncodingException, MessagingException {
 
 		User existUser = userService.findByEmail(emailDto.getEmail());
 		if (existUser != null)
-			return new ResponseEntity<>("This email is existed !", HttpStatus.BAD_REQUEST);
+			return new ResponseEntity<>(new MessageDto("User is not existed"),
+					HttpStatus.BAD_REQUEST);
 
 		mailSenderService.sendOtpEmail(emailDto.getEmail());
 
-		return new ResponseEntity<>("Sent mail successfully !", HttpStatus.OK);
+		return new ResponseEntity<>(new MessageDto("Sent mail successfully"), HttpStatus.OK);
 	}
 
 	@PostMapping(path = "/auth/register/")
 	@CrossOrigin
-	public ResponseEntity<User> register(@RequestBody UserRegisterDto registerDto) {
+	public ResponseEntity<Object> register(@RequestBody UserRegisterDto registerDto) {
 
 		User existUser = userService.findByEmail(registerDto.getEmail());
 		VerifyEmail verifyEmail = verifyEmailService.findByEmail(registerDto.getEmail());
@@ -168,10 +190,12 @@ public class ApiUserRestController {
 			return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
 
 		if (verifyEmailService.isOtpExpiredTime(verifyEmail))
-			return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+			return new ResponseEntity<>(new MessageDto("Invalid OTP or has expired"),
+					HttpStatus.UNAUTHORIZED);
 
 		if (!verifyEmailService.isOtpMatched(registerDto.getOtp(), verifyEmail))
-			return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+			return new ResponseEntity<>(new MessageDto("Invalid OTP or has expired"),
+					HttpStatus.UNAUTHORIZED);
 
 		userService.saveUserRegisterDto(registerDto);
 		existUser = userService.findByEmail(registerDto.getEmail());
@@ -180,36 +204,44 @@ public class ApiUserRestController {
 
 	}
 
-	@PatchMapping(path = "/updated-name/")
-	@CrossOrigin
-	public ResponseEntity<User> updatedName(@RequestBody UpdatedNameDto nameDto) {
-		User user = userService.getCurrentLoginUser();
-		user.setName(nameDto.getName());
-		userService.saveUser(user);
-
-		return new ResponseEntity<>(user, HttpStatus.OK);
-
-	}
-
-	@PatchMapping(path = "/updated-avatar/", consumes = {
+	@PatchMapping(path = "/current-user/", consumes = {
 			MediaType.MULTIPART_FORM_DATA_VALUE }, produces = { MediaType.APPLICATION_JSON_VALUE })
 	@CrossOrigin
-	public ResponseEntity<User> updatedAvatar(@RequestPart("avatar") MultipartFile file) {
-		User user = userService.getCurrentLoginUser();
+	public ResponseEntity<Object> updatedAvatar(@RequestPart("avatar") MultipartFile file,
+			@RequestParam Map<String, String> params) {
 
-		if (file == null || file.isEmpty()) {
-			return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		User currentUser = userService.getCurrentLoginUser();
+		if (currentUser == null)
+			return new ResponseEntity<Object>(new MessageDto("Lỗi chưa đăng nhập !"),
+					HttpStatus.NOT_FOUND);
+
+		String slug = params.getOrDefault("slug", null);
+		if (slug != null && !slug.isBlank()) {
+
+			User existSlugUser = userService.findBySlug(slug);
+			if (existSlugUser != null && !existSlugUser.getId().equals(currentUser.getId()))
+				return new ResponseEntity<Object>(new MessageDto("Trùng slug !"),
+						HttpStatus.UNAUTHORIZED);
+
+			currentUser.setSlug(slug);
 		}
 
-		if (user != null) {
-			user.setFile(file);
-			userService.setCloudinaryField(user);
+		String name = params.getOrDefault("name", null);
+		if (name != null && !name.isBlank())
+			currentUser.setName(name);
 
-			return new ResponseEntity<>(user, HttpStatus.OK);
+		String desc = params.getOrDefault("desc", null);
+		if (desc != null && !desc.isBlank())
+			currentUser.setDesc(desc);
+
+		if (file != null && !file.isEmpty()) {
+			currentUser.setFile(file);
+			userService.setCloudinaryField(currentUser);
 		}
 
-		return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+		userService.saveUser(currentUser);
 
+		return new ResponseEntity<>(currentUser, HttpStatus.OK);
 	}
 
 	@GetMapping(path = "/blogs/")
@@ -238,7 +270,7 @@ public class ApiUserRestController {
 		return new ResponseEntity<Object>(allBlogsPaginated, HttpStatus.OK);
 	}
 
-	@PostMapping(path = "/blog/")
+	@PostMapping(path = "/my-blogs/")
 	@CrossOrigin
 	public ResponseEntity<Blog> createBlog(@RequestBody BlogDto blogDto) {
 
@@ -281,7 +313,7 @@ public class ApiUserRestController {
 		return new ResponseEntity<>(blogItemDto, HttpStatus.OK);
 	}
 
-	@GetMapping(path = "/blog/{blogId}/")
+	@GetMapping(path = "/blogs/{blogId}/")
 	@CrossOrigin
 	public ResponseEntity<Object> getBlog(@PathVariable("blogId") Integer blogId) {
 
@@ -366,7 +398,6 @@ public class ApiUserRestController {
 		if (likeBlog != null) {
 			likeBlog.setHasLiked(!likeBlog.getHasLiked());
 			likeBlogService.saveLikeBlog(likeBlog);
-
 
 			likeBlog.setBlog(blog);
 			likeBlogService.saveLikeBlog(likeBlog);
@@ -507,6 +538,19 @@ public class ApiUserRestController {
 		return new ResponseEntity<>(ciDtos, HttpStatus.OK);
 	}
 
+	@GetMapping(path = "/blogs/{blogId}/comments/count/")
+	@CrossOrigin
+	public ResponseEntity<Object> countParentComment(@PathVariable("blogId") Integer blogId) {
+
+		Blog blog = blogService.findById(blogId);
+		if (blog == null)
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
+		Integer countParentCmt = commentBlogService.countCommentBlogByBlog(blog);
+
+		return new ResponseEntity<>(new TotalLikeDto(countParentCmt), HttpStatus.OK);
+	}
+
 	@GetMapping(path = "/blogs/{blogId}/comments/{parentCommentId}/count/")
 	@CrossOrigin
 	public ResponseEntity<Object> countChildComment(@PathVariable("blogId") Integer blogId,
@@ -570,8 +614,189 @@ public class ApiUserRestController {
 		likeComment.setIsActived(true);
 		likeCommentService.saveLikeComment(likeComment);
 
-
 		return new ResponseEntity<>(likeComment, HttpStatus.CREATED);
+	}
+
+	@PostMapping(path = "/comment-lesson/{lessonId}/")
+	@CrossOrigin
+	public ResponseEntity<Object> commentLesson(@PathVariable("lessonId") Integer lessonId,
+			@RequestBody CommentLessonInputDto cld) {
+		User currentUser = userService.getCurrentLoginUser();
+		Lesson lesson = lessonService.findLessonById(lessonId);
+
+		Integer parentId = cld.getParentCommentId();
+
+		if (lesson == null || currentUser == null)
+			return new ResponseEntity<>(new MessageDto("Invalid user or course"),
+					HttpStatus.NOT_FOUND);
+
+		Comment comment = new Comment();
+		comment.setCreatedDate(new Date());
+		comment.setContent(cld.getContent());
+		comment.setUser(currentUser);
+
+		if (parentId != null) {
+			Comment parentCom = commentService.findCommentById(parentId);
+			comment.setComment(parentCom);
+
+		}
+
+		commentService.saveComment(comment);
+
+		CommentLesson commentLesson = new CommentLesson();
+		commentLesson.setComment(comment);
+		commentLesson.setLesson(lesson);
+
+		commentLessonService.saveCommentLesson(commentLesson);
+
+		return new ResponseEntity<>(commentLesson, HttpStatus.CREATED);
+
+	}
+
+//	@GetMapping(path = "/lesson/{lessonId}/comments/")
+//	@CrossOrigin
+//	public ResponseEntity<List<CommentLesson>> getParentCommentsLesson(
+//			@PathVariable("lessonId") Integer lessonId) {
+//
+//		Lesson lesson = lessonService.findLessonById(lessonId);
+//
+//		if (lesson == null)
+//			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+//
+//		
+//		cmls.stream().forEach(cml -> {
+//			Integer totalLike = likeCommentService.countLikeCommentByComment(cml.getComment());
+//			cml.getComment().setTotalLike(totalLike);
+//		});
+//
+//		return new ResponseEntity<>(cmls, HttpStatus.OK);
+//	}
+
+	@GetMapping(path = "/courses/")
+	@CrossOrigin
+	public ResponseEntity<Object> getAllCourses(@RequestParam Map<String, String> params) {
+
+		Integer page = Integer.parseInt(params.getOrDefault("page", "1"));
+		Integer size = Integer.parseInt(params.getOrDefault("size", "10"));
+
+		List<Course> courses = courseService.findAllCourses();
+		Page<Course> paginatedCourse = courseService.paginatedCourse(page, size, courses);
+
+		return new ResponseEntity<>(paginatedCourse, HttpStatus.OK);
+	}
+
+	@GetMapping(path = "/courses/{courseId}/")
+	@CrossOrigin
+	public ResponseEntity<Object> getUserCourseByCourseId(
+			@PathVariable("courseId") Integer courseId) {
+
+		Course course = courseService.findCourseById(courseId);
+
+		if (course == null)
+			return new ResponseEntity<>(new MessageDto("Invalid course"), HttpStatus.NOT_FOUND);
+
+		return new ResponseEntity<>(course, HttpStatus.OK);
+	}
+
+	@GetMapping("/courses/{courseId}/register/")
+	@CrossOrigin
+	public ResponseEntity<Object> addNewUserCourse(
+			@PathVariable("courseId") Integer courseId) {
+
+		User currentUser = userService.getCurrentLoginUser();
+		Course course = courseService.findCourseById(courseId);
+
+		UserCourse userCourses = userCourseService.findUserCourseByUserAndCourse(currentUser,
+				course);
+		if (currentUser == null || course == null)
+			return new ResponseEntity<>(new MessageDto("Invalid user"), HttpStatus.NOT_FOUND);
+
+		if (userCourses != null)
+			return new ResponseEntity<>(new MessageDto("User has bought this course"),
+					HttpStatus.UNAUTHORIZED);
+
+		UserCourse uc = new UserCourse();
+		uc.setUser(currentUser);
+		uc.setCourse(course);
+		uc.setJoinedDate(new Date());
+
+		userCourseService.saveUserCourse(userCourses);
+
+		return new ResponseEntity<>(uc, HttpStatus.OK);
+	}
+
+	@GetMapping("/courses/{courseId}/register/checked/")
+	@CrossOrigin
+	public ResponseEntity<Object> checkedExistUserCourse(
+			@PathVariable("courseId") Integer courseId) {
+
+		User currentUser = userService.getCurrentLoginUser();
+		Course course = courseService.findCourseById(courseId);
+
+		UserCourse userCourses = userCourseService.findUserCourseByUserAndCourse(currentUser,
+				course);
+
+		if (currentUser == null || course == null || userCourses == null)
+			return new ResponseEntity<>(new MessageDto("Invalid user"), HttpStatus.NOT_FOUND);
+
+		Boolean isBought = userCourses != null ? true : false;
+
+		return new ResponseEntity<>(isBought, HttpStatus.OK);
+	}
+
+	@GetMapping("/{slug}/registered-courses/show/")
+	@CrossOrigin
+	public ResponseEntity<Object> getAllUserCourseRegisteredBySlug(
+			@PathVariable("slug") String slug) {
+
+		User user = userService.findBySlug(slug);
+		if (user == null)
+			return new ResponseEntity<>(new MessageDto("Invalid user"), HttpStatus.NOT_FOUND);
+
+		List<UserCourse> ucs = userCourseService.findUserCourseByUser(user);
+
+		return new ResponseEntity<>(ucs, HttpStatus.OK);
+	}
+
+	@GetMapping("/courses/{courseId}/lessons/quick-view/")
+	@CrossOrigin
+	public ResponseEntity<Object> getQuickViewLessionByCourseId(
+			@PathVariable("courseId") Integer courseId) {
+
+		Course course = courseService.findCourseById(courseId);
+
+		if (course == null)
+			return new ResponseEntity<>(new MessageDto("Invalid course"), HttpStatus.NOT_FOUND);
+
+		List<Lesson> lessons = lessonService.findByCourse(course);
+
+		List<LessonQuickViewDto> lDto = new ArrayList<>();
+
+		lessons.forEach((l) -> {
+			lDto.add(new LessonQuickViewDto(l.getId(), l.getTitle()));
+		});
+
+		return new ResponseEntity<>(lDto, HttpStatus.OK);
+	}
+
+	@GetMapping(path = "/courses/{courseId}/lessons/")
+	@CrossOrigin
+	public ResponseEntity<Object> getAllLessonByCourse(
+			@PathVariable("courseId") Integer courseId) {
+
+		User currentUser = userService.getCurrentLoginUser();
+		Course course = courseService.findCourseById(courseId);
+
+		UserCourse userCourses = userCourseService.findUserCourseByUserAndCourse(currentUser,
+				course);
+
+		if (currentUser == null || course == null || userCourses == null)
+			return new ResponseEntity<>(new MessageDto("Invalid user or course"),
+					HttpStatus.NOT_FOUND);
+
+		List<Lesson> lessons = course.getLessons();
+
+		return new ResponseEntity<>(lessons, HttpStatus.OK);
 	}
 
 }

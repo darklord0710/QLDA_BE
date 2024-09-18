@@ -1,6 +1,7 @@
 package com.spring.qldapmbe.manageCourse.demo.service.impl;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Level;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
+import com.spring.qldapmbe.manageCourse.demo.entity.Course;
 import com.spring.qldapmbe.manageCourse.demo.entity.Lesson;
 import com.spring.qldapmbe.manageCourse.demo.repository.LessonRepository;
 import com.spring.qldapmbe.manageCourse.demo.service.LessonService;
@@ -55,6 +57,11 @@ public class LessonServiceImpl implements LessonService {
 
 		Lesson l = lesson.get();
 		return l;
+	}
+
+	@Override
+	public List<Lesson> findByCourse(Course course) {
+		return lessonRepository.findByCourse(course);
 	}
 
 }

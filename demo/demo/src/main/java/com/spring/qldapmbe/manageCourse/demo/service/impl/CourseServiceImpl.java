@@ -1,6 +1,7 @@
 package com.spring.qldapmbe.manageCourse.demo.service.impl;
 
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -8,6 +9,10 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import com.cloudinary.Cloudinary;
@@ -62,6 +67,25 @@ public class CourseServiceImpl implements CourseService {
 		Course c = course.get();
 
 		return c;
+	}
+
+	@Override
+	public Page<Course> paginatedCourse(Integer page, Integer size, List<Course> courses) {
+
+		Pageable pageable = PageRequest.of(page - 1, size);
+
+		int start = (int) pageable.getOffset();
+		int end = 0;
+		List<Course> coursesPaginated;
+
+		if (courses.size() < start) {
+			coursesPaginated = Collections.emptyList();
+		} else {
+			end = Math.min((start + pageable.getPageSize()), courses.size());
+			coursesPaginated = courses.subList(start, end);
+		}
+
+		return new PageImpl<>(coursesPaginated, pageable, courses.size());
 	}
 
 }

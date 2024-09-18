@@ -1,7 +1,9 @@
 package com.spring.qldapmbe.manageCourse.demo.Dto;
 
-import com.qldapm.spring.eCourseWeb.entity.Blog;
-import com.qldapm.spring.eCourseWeb.entity.User;
+
+
+import com.spring.qldapmbe.manageCourse.demo.entity.Blog;
+import com.spring.qldapmbe.manageCourse.demo.entity.User;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

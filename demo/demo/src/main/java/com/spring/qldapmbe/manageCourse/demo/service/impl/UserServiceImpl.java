@@ -122,4 +122,9 @@ public class UserServiceImpl implements UserService {
 		}
 	}
 
+	@Override
+	public User findBySlug(String slug) {
+		return userRepository.findBySlug(slug);
+	}
+
 }
