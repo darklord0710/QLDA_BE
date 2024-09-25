@@ -1,6 +1,5 @@
 package com.spring.qldapmbe.manageCourse.demo.entity;
 
-import java.awt.TrayIcon.MessageType;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

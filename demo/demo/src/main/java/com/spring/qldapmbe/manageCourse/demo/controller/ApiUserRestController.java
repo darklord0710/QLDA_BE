@@ -15,7 +15,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,12 +35,13 @@ import com.spring.qldapmbe.manageCourse.demo.Dto.BlogDtoOutputById;
 import com.spring.qldapmbe.manageCourse.demo.Dto.BlogItemDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.CommentBlogInputDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.CommentItemDto;
-import com.spring.qldapmbe.manageCourse.demo.Dto.CommentLessonInputDto;
+import com.spring.qldapmbe.manageCourse.demo.Dto.CoursesTypesDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.CreateCommentBlogOutputDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.EmailDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.HasLikedDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.LessonQuickViewDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.MessageDto;
+import com.spring.qldapmbe.manageCourse.demo.Dto.PasswordChangeDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.TotalLikeDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.UpdateContentCmtDto;
 import com.spring.qldapmbe.manageCourse.demo.Dto.UserCreatorDto;
@@ -48,7 +51,6 @@ import com.spring.qldapmbe.manageCourse.demo.config.JwtService;
 import com.spring.qldapmbe.manageCourse.demo.entity.Blog;
 import com.spring.qldapmbe.manageCourse.demo.entity.Comment;
 import com.spring.qldapmbe.manageCourse.demo.entity.CommentBlog;
-import com.spring.qldapmbe.manageCourse.demo.entity.CommentLesson;
 import com.spring.qldapmbe.manageCourse.demo.entity.Course;
 import com.spring.qldapmbe.manageCourse.demo.entity.Lesson;
 import com.spring.qldapmbe.manageCourse.demo.entity.LikeBlog;
@@ -88,6 +90,7 @@ public class ApiUserRestController {
 	private CommentLessonService commentLessonService;
 	private CourseService courseService;
 	private UserCourseService userCourseService;
+	private PasswordEncoder encoder;
 
 	@Autowired
 	public ApiUserRestController(JwtService jwtService, UserService userService,
@@ -96,7 +99,7 @@ public class ApiUserRestController {
 			CommentService commentService, CommentBlogService commentBlogService,
 			LikeCommentService likeCommentService, LessonService lessonService,
 			CommentLessonService commentLessonService, CourseService courseService,
-			UserCourseService userCourseService) {
+			UserCourseService userCourseService, PasswordEncoder encoder) {
 		super();
 		this.jwtService = jwtService;
 		this.userService = userService;
@@ -111,6 +114,7 @@ public class ApiUserRestController {
 		this.commentLessonService = commentLessonService;
 		this.courseService = courseService;
 		this.userCourseService = userCourseService;
+		this.encoder = encoder;
 	}
 
 	@PostMapping(path = "/auth/login/")
@@ -204,10 +208,33 @@ public class ApiUserRestController {
 
 	}
 
+	@PostMapping("/auth/change-password/")
+	@CrossOrigin
+	public ResponseEntity<Object> changePassword(@RequestBody PasswordChangeDto passwordChangeDto) {
+		User currentUser = userService.getCurrentLoginUser();
+		if (currentUser == null)
+			return new ResponseEntity<Object>(new MessageDto("Lỗi chưa đăng nhập !"),
+					HttpStatus.NOT_FOUND);
+
+		if (!encoder.matches(passwordChangeDto.getCurrentPassword(), currentUser.getPassword()))
+			return new ResponseEntity<Object>(new MessageDto("Sai mật khẩu hiện tại"),
+					HttpStatus.UNAUTHORIZED);
+
+		if (encoder.matches(passwordChangeDto.getNewPassword(), currentUser.getPassword()))
+			return new ResponseEntity<Object>(new MessageDto("Trùng mật khẩu cũ"),
+					HttpStatus.UNAUTHORIZED);
+
+		currentUser.setPassword(encoder.encode(passwordChangeDto.getNewPassword()));
+		userService.saveUser(currentUser);
+
+		return new ResponseEntity<>(HttpStatus.OK);
+	}
+
 	@PatchMapping(path = "/current-user/", consumes = {
 			MediaType.MULTIPART_FORM_DATA_VALUE }, produces = { MediaType.APPLICATION_JSON_VALUE })
 	@CrossOrigin
-	public ResponseEntity<Object> updatedAvatar(@RequestPart("avatar") MultipartFile file,
+	public ResponseEntity<Object> updatedAvatar(
+			@RequestPart(name = "avatar", required = false) MultipartFile file,
 			@RequestParam Map<String, String> params) {
 
 		User currentUser = userService.getCurrentLoginUser();
@@ -477,6 +504,24 @@ public class ApiUserRestController {
 		return new ResponseEntity<>(c, HttpStatus.OK);
 	}
 
+	@DeleteMapping(path = "/comments/{commentId}/")
+	@CrossOrigin
+	public ResponseEntity<Object> deleteComment(@PathVariable("commentId") Integer commentId) {
+
+		User currentUser = userService.getCurrentLoginUser();
+		Comment comment = commentService.findCommentById(commentId);
+
+		if (comment == null || currentUser == null)
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
+		if (!currentUser.equals(comment.getUser()))
+			return new ResponseEntity<>(HttpStatus.UNAUTHORIZED);
+
+		commentService.deleteComment(comment);
+
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+	}
+
 	@GetMapping(path = "/blogs/{blogId}/comments/")
 	@CrossOrigin
 	public ResponseEntity<Object> getParentCommentsBlog(
@@ -583,6 +628,19 @@ public class ApiUserRestController {
 		return new ResponseEntity<>(new HasLikedDto(hasLike), HttpStatus.OK);
 	}
 
+	@GetMapping(path = "/comments/{commentId}/likes/count/")
+	@CrossOrigin
+	public ResponseEntity<Object> countLikeComment(@PathVariable("commentId") Integer commentId) {
+
+		Comment comment = commentService.findCommentById(commentId);
+		if (comment == null)
+			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+
+		Integer countLikeCmt = likeCommentService.countLikeCommentByComment(comment);
+
+		return new ResponseEntity<>(new TotalLikeDto(countLikeCmt), HttpStatus.OK);
+	}
+
 	@PostMapping(path = "/comments/{commentId}/likes/")
 	@CrossOrigin
 	@Async
@@ -617,72 +675,23 @@ public class ApiUserRestController {
 		return new ResponseEntity<>(likeComment, HttpStatus.CREATED);
 	}
 
-	@PostMapping(path = "/comment-lesson/{lessonId}/")
-	@CrossOrigin
-	public ResponseEntity<Object> commentLesson(@PathVariable("lessonId") Integer lessonId,
-			@RequestBody CommentLessonInputDto cld) {
-		User currentUser = userService.getCurrentLoginUser();
-		Lesson lesson = lessonService.findLessonById(lessonId);
-
-		Integer parentId = cld.getParentCommentId();
-
-		if (lesson == null || currentUser == null)
-			return new ResponseEntity<>(new MessageDto("Invalid user or course"),
-					HttpStatus.NOT_FOUND);
-
-		Comment comment = new Comment();
-		comment.setCreatedDate(new Date());
-		comment.setContent(cld.getContent());
-		comment.setUser(currentUser);
-
-		if (parentId != null) {
-			Comment parentCom = commentService.findCommentById(parentId);
-			comment.setComment(parentCom);
-
-		}
-
-		commentService.saveComment(comment);
-
-		CommentLesson commentLesson = new CommentLesson();
-		commentLesson.setComment(comment);
-		commentLesson.setLesson(lesson);
-
-		commentLessonService.saveCommentLesson(commentLesson);
-
-		return new ResponseEntity<>(commentLesson, HttpStatus.CREATED);
-
-	}
-
-//	@GetMapping(path = "/lesson/{lessonId}/comments/")
-//	@CrossOrigin
-//	public ResponseEntity<List<CommentLesson>> getParentCommentsLesson(
-//			@PathVariable("lessonId") Integer lessonId) {
-//
-//		Lesson lesson = lessonService.findLessonById(lessonId);
-//
-//		if (lesson == null)
-//			return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-//
-//		
-//		cmls.stream().forEach(cml -> {
-//			Integer totalLike = likeCommentService.countLikeCommentByComment(cml.getComment());
-//			cml.getComment().setTotalLike(totalLike);
-//		});
-//
-//		return new ResponseEntity<>(cmls, HttpStatus.OK);
-//	}
-
 	@GetMapping(path = "/courses/")
 	@CrossOrigin
-	public ResponseEntity<Object> getAllCourses(@RequestParam Map<String, String> params) {
-
-		Integer page = Integer.parseInt(params.getOrDefault("page", "1"));
-		Integer size = Integer.parseInt(params.getOrDefault("size", "10"));
+	public ResponseEntity<Object> getAllCourses() {
 
 		List<Course> courses = courseService.findAllCourses();
-		Page<Course> paginatedCourse = courseService.paginatedCourse(page, size, courses);
 
-		return new ResponseEntity<>(paginatedCourse, HttpStatus.OK);
+		List<Course> freeCourses = new ArrayList<>();
+		List<Course> proCourses = new ArrayList<>();
+
+		courses.forEach((c) -> {
+			if (c.getIsFree())
+				freeCourses.add(c);
+			else
+				proCourses.add(c);
+		});
+
+		return new ResponseEntity<>(new CoursesTypesDto(freeCourses, proCourses), HttpStatus.OK);
 	}
 
 	@GetMapping(path = "/courses/{courseId}/")
@@ -736,7 +745,7 @@ public class ApiUserRestController {
 		UserCourse userCourses = userCourseService.findUserCourseByUserAndCourse(currentUser,
 				course);
 
-		if (currentUser == null || course == null || userCourses == null)
+		if (currentUser == null || course == null)
 			return new ResponseEntity<>(new MessageDto("Invalid user"), HttpStatus.NOT_FOUND);
 
 		Boolean isBought = userCourses != null ? true : false;
@@ -756,6 +765,26 @@ public class ApiUserRestController {
 		List<UserCourse> ucs = userCourseService.findUserCourseByUser(user);
 
 		return new ResponseEntity<>(ucs, HttpStatus.OK);
+	}
+
+	@GetMapping("/registered-courses/")
+	@CrossOrigin
+	public ResponseEntity<Object> getAllUserCourseByCurrentUser() {
+		User currentUser = userService.getCurrentLoginUser();
+
+		if (currentUser == null)
+			return new ResponseEntity<>(new MessageDto("Invalid user"), HttpStatus.NOT_FOUND);
+
+		List<UserCourse> ucs = userCourseService.findUserCourseByUser(currentUser);
+
+		List<Course> c = new ArrayList<>();
+
+		ucs.forEach((uc) -> {
+			c.add(uc.getCourse());
+		});
+
+		return new ResponseEntity<>(c, HttpStatus.OK);
+
 	}
 
 	@GetMapping("/courses/{courseId}/lessons/quick-view/")
@@ -798,5 +827,6 @@ public class ApiUserRestController {
 
 		return new ResponseEntity<>(lessons, HttpStatus.OK);
 	}
+
 
 }

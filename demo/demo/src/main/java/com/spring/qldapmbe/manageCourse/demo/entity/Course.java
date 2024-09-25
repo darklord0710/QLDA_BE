@@ -59,6 +59,9 @@ public class Course implements Serializable {
 	@Column(name = "is_actived")
 	private Boolean isActived;
 
+	@Column(name = "is_free")
+	private Boolean isFree;
+
 	@Transient
 	@JsonIgnore
 	private MultipartFile file;
